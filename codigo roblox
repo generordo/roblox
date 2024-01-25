@@ -1,0 +1,81 @@
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local character = Players.LocalPlayer
+
+local max_double_duration = 0.2
+local debounce_duration = 0.5
+
+local norm_speed = 16
+local run_speed = 25
+
+local camera = game.Workspace.CurrentCamera
+local originalFieldOfView = camera.FieldOfView
+
+local lastTick = tick()
+local debounce = false
+local running = true
+
+local slideAnim = Instance.new("Animation")
+slideAnim.AnimationId = "rbxassetid://16080276727" 
+
+function getCharacter()
+	return character.Character or character.CharacterAdded:Wait()
+end
+
+function changeSpeed(speed)
+	local character = getCharacter()
+	local humanoid = character:FindFirstChild("Humanoid")
+	humanoid.WalkSpeed = speed
+end
+
+function activate()
+	if debounce == false then
+		if tick() - lastTick <= max_double_duration then
+			debounce = true
+			running = true
+			changeSpeed(run_speed)
+
+			-- Animação da câmera (desaproximando)
+			local goal = {}
+			goal.FieldOfView = originalFieldOfView + 10  -- ajuste conforme necessário
+			local info = TweenInfo.new(0.5)
+			local tween = TweenService:Create(camera, info, goal)
+			tween:Play()
+
+			-- Reproduzir a animação de slide
+			local character = getCharacter()
+			local humanoid = character:FindFirstChild("Humanoid")
+			local playAnim = humanoid:LoadAnimation(slideAnim)
+			playAnim:Play()
+		end
+		lastTick = tick()
+	end
+end
+
+-- Eventos
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if input.KeyCode == Enum.KeyCode.W then
+		activate()
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessedEvent)
+	if input.KeyCode == Enum.KeyCode.W then
+		if running then
+			running = false
+			changeSpeed(norm_speed)
+
+			-- Animação da câmera (aproximando)
+			local goal = {}
+			goal.FieldOfView = originalFieldOfView
+			local info = TweenInfo.new(0.5)
+			local tween = TweenService:Create(camera, info, goal)
+			tween:Play()
+
+			wait(debounce_duration)
+			debounce = false
+		end
+	end
+end)
